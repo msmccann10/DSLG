@@ -1,0 +1,286 @@
+---
+title: "Chapter 11 - Data Import"
+author: "Mike McCann"
+date: "9/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+### Data Import
+
+## 11.1 Introduction
+
+## 11.2 Getting Started
+
+read_csv() reads comma delimited files
+read_csv2() reads semicolon separated files
+read_tsv() reads tab delimited files
+read_delim() reads files with any delimiter
+
+read_fwf() reads fixed with files. specified with fwf_widths() or fwf_positions().
+
+read_csv() will default to using the first line of data as the column names.
+-Use skip = n or comment = # when there are multiple lines of metadata at the top.
+-Use col_names = F if there are no column names/metadata. Or alternatively give them names [col_names = c("x", "y", "z")]
+
+## 11.2.1 Compare to base R
+
+read_csv() better than read.csv() because it is faster, doesn't mess with values, and is more reproducible.
+
+Exercises:
+# 1. What function would you use to read a file where fields were separated with “|”?
+```{r}
+read_delim() more specifically... read_delim(file, delim = "|")
+```
+
+# 2. Apart from file, skip, and comment, what other arguments do read_csv() and read_tsv() have in common?
+```{r}
+# col_names: specify the column names for parsing
+# col_type: specify the column type for parsing
+# locale: used for determining . vs ,
+# na: how are NAs treated
+# quoted_na
+# trim_ws: trim whitespace
+# n_max: how many rows are read
+# guess_max: 
+# progress: is there a progress bar
+
+intersect(names(formals(read_csv)), names(formals(read_tsv)))
+
+formals(read_csv)
+names(formals(read_csv))
+
+```
+
+# 3. What are the most important arguments to read_fwf()?
+```{r}
+
+# probably col_positions to determine where columns begin/end.
+
+```
+
+# 4.Sometimes strings in a CSV file contain commas. To prevent them from causing problems they need to be surrounded by a quoting character, like " or '. By default, read_csv() assumes that the quoting character will be ". What argument to read_csv() do you need to specify to read the following text into a data frame? 
+- "x,y
+\n 1,'a,b'"
+
+```{r}
+#new versions of read_csv support the quote = argument... previous versions required read_delim
+
+# Brett:
+
+read_csv("x,y\n1,'a,b'", quote = "\'")
+
+#----
+# Mike
+
+x <- "x,y\n1,'a,b'"
+read_delim(x, ",", quote = "'")
+read_csv(x, quote = "'")
+```
+
+# 5. Identify what is wrong with each of the following inline CSV files. What happens when you run the code?
+read_csv("a,b\n 1,2,3\n 4,5,6")
+read_csv("a,b,c\n 1,2\n1,2,3,4")
+read_csv("a,b\n\"1")
+read_csv("a,b\n 1,2\na,b")
+read_csv("a;b\n 1;3")
+
+```{r}
+# 5a. 2 column headers in the first line. Subsequent lines have 3 values.
+# 5b. 3 column headers. Second line has 2 values, the third line has 4.
+# 5c. \n\ should be \n. Also too many "
+# 5d. column name shares value as third line???
+# 5e. Using semicolons in a comma delimited csv.
+
+read_csv("a;b\n 1;3")
+
+```
+
+## 11.3 Parsing a Vector
+
+Parsing takes a character vector and returns a more specialized vector
+
+-parse_logical() and parse_interger() are basic parsing functions
+
+-locale argument in parse functions specify parsing options that differ from place to place
+
+## 11.3.1 Numbers
+
+Parsing numbers is difficult because people write numbers differently (commma as a decimal), characters surrounding a number ($ or %), and or grouping characters (ex: 1,000).
+
+-parse_double() allows you to get around comma issues using the locale option.
+-parse_number() ignores non-numeric characters as in currency or percentages. Can use "grouping_mark" to eliminate odd groupings.
+
+## 11.3.2 Strings
+
+readr assumes UTF-8 coding. Older data/files that don't understand UTF-8 may be problematic. Can fix this in parse_character() by specifying the encoding using "encoding". 
+-ex: parse_character(x1, locale = locale(encoding = "Latin1"))
+
+If you don't know the encoding you can use guess_encoding()
+-ex: guess_encoding(charToRaw(x1))
+
+more on encoding: http://kunststube.net/encoding/
+
+## 11.3.3 Factors
+
+parse_factor() with a defined set of levels to generate a warning of unexpected values. Seems of limitted utility....
+
+## 11.3.4 Dates, date-times, and times
+
+-parse_date(): expects four digit year followed by - or / and month followed by - or / and day. 
+-parse_datetime(): expects ISO8601. ISO8601 is the international standard where things are organized from largest to smallest: year, month, day, hour, minute, second...
+-parse_time(): expects hour : minutes. Seconds and am/pm are optional.
+
+custom formating for dates/times
+
+Year
+%Y (4 digits).
+%y (2 digits); 
+
+Month
+%m (2 digits).
+%b (abbreviated name, like “Jan”).
+%B (full name, “January”).
+
+Day
+%d (2 digits).
+%e (optional leading space).
+
+Time
+%H 0-23 hour.
+%I 0-12, must be used with %p.
+%p AM/PM indicator.
+%M minutes.
+%S integer seconds.
+%OS real seconds.
+%Z Time zone.
+%z (as offset from UTC, e.g. +0800).
+
+Non-digits
+%. skips one non-digit character.
+%* skips any number of non-digits.
+
+EX: parse_date("01/02/15", "%m/%d/%y")
+
+## 11.3.5 Exercises:
+
+#1 What are the most important arguments to locale()?
+```{r}
+
+# locale appears to handle date/time formating, time zones, numbering issues, and encoding
+date_names
+date_format
+time_format
+tz
+decimal_mark
+grouping_mark
+encoding
+
+```
+
+#2 What happens if you try and set decimal_mark and grouping_mark to the same character? What happens to the default value of grouping_mark when you set decimal_mark to “,”? What happens to the default value of decimal_mark when you set the grouping_mark to “.”?
+
+```{r}
+# parse_number("123,456,789", locale = locale(decimal_mark = ","), locale = locale(grouping_mark = ","))
+# Throws an error that locale is matched by multiple actual arguments
+
+# locale(decimal_mark = ",")
+# changing the decimal_mark to "," will set the group mark by default to "."
+
+# locale(grouping_mark = ",")
+# changing the grouping_mark to ".: will set the decimal mark by default to ","
+```
+
+#3 I didn’t discuss the date_format and time_format options to locale(). What do they do? Construct an example that shows when they might be useful.
+```{r}
+# wolfgang:
+
+parse_date("14 enero 2016", "%d %B %Y", locale = locale("es"))
+
+# date_format() and time_format() allow you to change the default format for dates/times as well as timezone
+
+test_loc <- locale(date_format = "%y-%B-%d")
+parse_date("88-February-17", locale = test_loc)
+
+# locale(date_format = "%Y-%m-%d", tz = "UTC")
+```
+
+#4 If you live outside the US, create a new locale object that encapsulates the settings for the types of file you read most commonly.
+```{r}
+
+swiss_locale <- locale(date_format = "%Y.%m.%d", time_format = "%H:%M")
+
+parse_date("1988.02.17", locale = swiss_locale)
+parse_time("22:20", locale = swiss_locale)
+
+```
+
+#5 What’s the difference between read_csv() and read_csv2()?
+```{r}
+#The delimiter. read_csv() uses "," whereas read_csv2() uses ";"
+
+```
+
+#6 What are the most common encodings used in Europe? What are the most common encodings used in Asia? Do some googling to find out.
+```{r}
+#Generally: UTF-8
+#Europe: ISO-8859-1 also know as Latin-1
+#Asia - Japan: Shift_JIS
+#Asia - Korea: EUC-KR
+#Asia - China: GB 2312
+
+```
+
+#7 Generate the correct format string to parse each of the following dates and times:
+```{r}
+d1 <- "January 1, 2010"
+d2 <- "2015-Mar-07"
+d3 <- "06-Jun-2017"
+d4 <- c("August 19 (2015)", "July 1 (2015)")
+d5 <- "12/30/14" # Dec 30, 2014
+t1 <- "1705"
+t2 <- "11:15:10.12 PM"
+
+parse_date(d1, "%B %D, %Y")
+parse_date(d2, "%Y-%b-%d")
+parse_date(d3, "%d-%b-%Y")
+parse_date(d4, "%B %d (%Y)")
+parse_date(d5, "%m/%d/%y")
+parse_time(t1, "%H%M")
+parse_time(t2, "%I:%M:%OS %p")
+
+#interestingly parse_time(t2, "%H:%M:%OS %p") also works 
+
+```
+
+## 11.4 Parsing a File
+
+readr reads the first 1000 rows of a column to make a best guess as to the type of the column.
+
+-guess_parser() does the same thing. ex: guess_parser("2010-10-01")
+
+readr tries the following types in order stopping when it finds a match: Logical, integer, double, number, time, date, date-time. If no matches the column remains a vector of strings.
+
+use col_xyz to override readr's guess when it assigns the wrong column type to your imported data.
+
+
+## 11.5 Writing to a file
+
+use write_csv() and write_tsv() to write your data back to the disk. Output will be in UTF-8 and date/time will be in ISO8601. If data needs to be readable in excel then use write_excel_csv().
+-Unfortunately writing to csv will lose column types making it unreliable sometimes.
+
+write_rds() and read_rds() will save it in R's custom binary and keep it formatted for easy recall.
+Feather [library(feather)] is another option that is readable in other programming languages. 
+
+
+## 11.6 Other Types of Data
+
