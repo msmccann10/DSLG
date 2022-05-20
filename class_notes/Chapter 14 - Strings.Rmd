@@ -1,0 +1,38 @@
+---
+title: "Chapter 14 - Strings"
+author: "Michael McCann"
+date: "12/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+library(stringr)
+library(htmlwidgets)
+```
+
+```{r}
+
+str_view(c("$^$", "ab$^$sfas"), "\\$\\^\\$$", match = TRUE)
+
+str_view(stringr::words, "[aeiou]", match=FALSE)
+str_view(stringr::words, "^[^aeiou]+$", match = TRUE)
+
+str_view(stringr::words, "a", match = TRUE)
+
+```
+
+```{r}
+colours <- c("red", "orange", "yellow", "green", "blue", "purple")
+colour_match <- str_c(colours, collapse = "|")
+
+str_subset(sentences, colour_match)
+
+```
+
+
